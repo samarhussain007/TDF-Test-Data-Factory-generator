@@ -1,0 +1,77 @@
+{
+  "small_dev": {
+    "seed": 42,
+    "time": { "mode": "last_n_days", "n": 120 },
+
+    "tables": {
+      "organizations": {
+        "count": 5,
+
+        "columns": {
+          "plan": { "oneOf": ["FREE", "PRO", "ENTERPRISE"] },
+          "country": { "fixed": "IN" }
+        }
+      },
+
+      "users": {
+        "perParent": { "parent": "organizations", "fk": "org_id", "min": 5, "max": 12 },
+
+        "distributions": {
+          "status": { "ACTIVE": 0.7, "INVITED": 0.2, "DISABLED": 0.1 }
+        },
+
+        "columns": {
+          "email": { "nullRate": 0 },
+          "age": { "range": { "min": 18, "max": 60 } }
+        }
+      },
+
+      "roles": {
+        "count": 6,
+
+        "columns": {
+          "name": { "oneOf": ["ADMIN", "BILLING", "MEMBER", "SUPPORT", "READ_ONLY", "OWNER"] }
+        }
+      },
+
+      "user_roles": {
+        "m2m": {
+          "left": { "table": "users", "fk": "user_id" },
+          "right": { "table": "roles", "fk": "role_id" },
+          "perLeft": { "min": 1, "max": 3 }
+        }
+      },
+
+      "invoices": {
+        "perParent": { "parent": "organizations", "fk": "org_id", "min": 2, "max": 10 },
+
+        "distributions": {
+          "status": { "PAID": 0.6, "PENDING": 0.25, "OVERDUE": 0.15 }
+        },
+
+        "columns": {
+          "currency": { "fixed": "INR" },
+          "amount": { "range": { "min": 200, "max": 25000 } }
+        },
+
+        "rules": [
+          { "if": { "status": "PAID" }, "set": { "paid_at": "__AUTO_NOT_NULL__" } },
+          { "if": { "status": "PENDING" }, "set": { "paid_at": null } },
+          { "if": { "status": "OVERDUE" }, "set": { "paid_at": null } }
+        ]
+      },
+
+      "payments": {
+        "perParent": { "parent": "invoices", "fk": "invoice_id", "min": 0, "max": 2 },
+
+        "columns": {
+          "provider": { "oneOf": ["RAZORPAY", "STRIPE", "CASH"] }
+        },
+
+        "rules": [
+          { "if": { "invoice.status": "PAID" }, "set": { "amount": "__MATCH_INVOICE__" } }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "dialect": "postgres",
+  "tables": {
+    "organizations": {
+      "name": "organizations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "plan": {
+          "name": "plan",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "country": {
+          "name": "country",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniques": []
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "email": {
+          "name": "email",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "status": {
+          "name": "status",
+          "dbType": "user_status",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false,
+          "enumValues": ["ACTIVE", "INVITED", "DISABLED"]
+        },
+        "age": {
+          "name": "age",
+          "dbType": "int4",
+          "isNullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        {
+          "column": "org_id",
+          "refTable": "organizations",
+          "refColumn": "id"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": ["email"]
+        }
+      ]
+    },
+    "roles": {
+      "name": "roles",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniques": [
+        {
+          "columns": ["name"]
+        }
+      ]
+    },
+    "user_roles": {
+      "name": "user_roles",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": true
+        }
+      },
+      "primaryKey": ["user_id", "role_id"],
+      "foreignKeys": [
+        {
+          "column": "user_id",
+          "refTable": "users",
+          "refColumn": "id"
+        },
+        {
+          "column": "role_id",
+          "refTable": "roles",
+          "refColumn": "id"
+        }
+      ],
+      "uniques": []
+    },
+    "invoices": {
+      "name": "invoices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "amount": {
+          "name": "amount",
+          "dbType": "numeric",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "currency": {
+          "name": "currency",
+          "dbType": "text",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "status": {
+          "name": "status",
+          "dbType": "invoice_status",
+          "isNullable": false,
+          "hasDefault": false,
+          "isPrimaryKey": false,
+          "enumValues": ["PAID", "PENDING", "OVERDUE"]
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "dbType": "timestamptz",
+          "isNullable": true,
+          "hasDefault": false,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "hasDefault": true,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        {
+          "column": "org_id",
+          "refTable": "organizations",
+          "refColumn": "id"
+        }
+      ],
+      "uniques": []
+    }
+  }
+}
