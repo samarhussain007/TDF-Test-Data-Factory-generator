@@ -87,19 +87,46 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "addresses_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "addresses_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "user_id",
+          "constraintName": "addresses_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
           "refTable": "users",
-          "refColumn": "id",
-          "constraintName": "addresses_user_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "addresses_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "ux_default_address_per_user",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": true,
+          "predicate": "(is_default = true)"
+        }
+      ],
+      "checks": []
     },
     "coupons": {
       "name": "coupons",
@@ -139,10 +166,14 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "coupons_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "coupons_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -153,6 +184,33 @@
             "code"
           ],
           "constraintName": "coupons_tenant_id_percent_off_code_key"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "coupons_pkey",
+          "columns": [
+            "tenant_id",
+            "code"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "coupons_tenant_id_percent_off_code_key",
+          "columns": [
+            "tenant_id",
+            "code",
+            "percent_off"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "coupons_percent_off_check",
+          "expression": "((percent_off >= 1) AND (percent_off <= 90))"
         }
       ]
     },
@@ -209,25 +267,64 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "inventory_tenant_id_sku_fkey",
+          "columns": [
+            "tenant_id",
+            "sku"
+          ],
           "refTable": "products",
-          "refColumn": "tenant_id",
-          "constraintName": "inventory_tenant_id_sku_fkey"
+          "refColumns": [
+            "tenant_id",
+            "sku"
+          ]
         },
         {
-          "column": "sku",
-          "refTable": "products",
-          "refColumn": "sku",
-          "constraintName": "inventory_tenant_id_sku_fkey"
-        },
-        {
-          "column": "warehouse_id",
+          "constraintName": "inventory_warehouse_id_fkey",
+          "columns": [
+            "warehouse_id"
+          ],
           "refTable": "warehouses",
-          "refColumn": "id",
-          "constraintName": "inventory_warehouse_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "idx_inventory_tenant_sku",
+          "columns": [
+            "tenant_id",
+            "sku"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "inventory_pkey",
+          "columns": [
+            "warehouse_id",
+            "tenant_id",
+            "sku"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "inventory_check",
+          "expression": "(reserved <= on_hand)"
+        },
+        {
+          "name": "inventory_on_hand_check",
+          "expression": "(on_hand >= 0)"
+        },
+        {
+          "name": "inventory_reserved_check",
+          "expression": "(reserved >= 0)"
+        }
+      ]
     },
     "order_audit": {
       "name": "order_audit",
@@ -273,13 +370,28 @@
       ],
       "foreignKeys": [
         {
-          "column": "order_id",
+          "constraintName": "order_audit_order_id_fkey",
+          "columns": [
+            "order_id"
+          ],
           "refTable": "orders",
-          "refColumn": "id",
-          "constraintName": "order_audit_order_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "order_audit_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "order_coupons": {
       "name": "order_coupons",
@@ -313,25 +425,42 @@
       ],
       "foreignKeys": [
         {
-          "column": "order_id",
+          "constraintName": "order_coupons_order_id_fkey",
+          "columns": [
+            "order_id"
+          ],
           "refTable": "orders",
-          "refColumn": "id",
-          "constraintName": "order_coupons_order_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "tenant_id",
+          "constraintName": "order_coupons_tenant_id_coupon_code_fkey",
+          "columns": [
+            "tenant_id",
+            "coupon_code"
+          ],
           "refTable": "coupons",
-          "refColumn": "tenant_id",
-          "constraintName": "order_coupons_tenant_id_coupon_code_fkey"
-        },
-        {
-          "column": "coupon_code",
-          "refTable": "coupons",
-          "refColumn": "code",
-          "constraintName": "order_coupons_tenant_id_coupon_code_fkey"
+          "refColumns": [
+            "tenant_id",
+            "code"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "order_coupons_pkey",
+          "columns": [
+            "order_id",
+            "tenant_id",
+            "coupon_code"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "order_items": {
       "name": "order_items",
@@ -386,25 +515,55 @@
       ],
       "foreignKeys": [
         {
-          "column": "order_id",
+          "constraintName": "order_items_order_id_fkey",
+          "columns": [
+            "order_id"
+          ],
           "refTable": "orders",
-          "refColumn": "id",
-          "constraintName": "order_items_order_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "tenant_id",
+          "constraintName": "order_items_tenant_id_sku_fkey",
+          "columns": [
+            "tenant_id",
+            "sku"
+          ],
           "refTable": "products",
-          "refColumn": "tenant_id",
-          "constraintName": "order_items_tenant_id_sku_fkey"
-        },
-        {
-          "column": "sku",
-          "refTable": "products",
-          "refColumn": "sku",
-          "constraintName": "order_items_tenant_id_sku_fkey"
+          "refColumns": [
+            "tenant_id",
+            "sku"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "order_items_pkey",
+          "columns": [
+            "order_id",
+            "tenant_id",
+            "sku"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "order_items_discount_cents_check",
+          "expression": "(discount_cents >= 0)"
+        },
+        {
+          "name": "order_items_quantity_check",
+          "expression": "(quantity > 0)"
+        },
+        {
+          "name": "order_items_unit_price_cents_check",
+          "expression": "(unit_price_cents >= 0)"
+        }
+      ]
     },
     "orders": {
       "name": "orders",
@@ -501,22 +660,34 @@
       ],
       "foreignKeys": [
         {
-          "column": "address_id",
+          "constraintName": "orders_address_id_fkey",
+          "columns": [
+            "address_id"
+          ],
           "refTable": "addresses",
-          "refColumn": "id",
-          "constraintName": "orders_address_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "tenant_id",
+          "constraintName": "orders_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "orders_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "user_id",
+          "constraintName": "orders_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
           "refTable": "users",
-          "refColumn": "id",
-          "constraintName": "orders_user_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -526,6 +697,56 @@
             "id"
           ],
           "constraintName": "orders_tenant_id_id_key"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_orders_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "idx_orders_tenant_user",
+          "columns": [
+            "tenant_id",
+            "user_id"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "orders_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "orders_tenant_id_id_key",
+          "columns": [
+            "id",
+            "tenant_id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "orders_subtotal_cents_check",
+          "expression": "(subtotal_cents >= 0)"
+        },
+        {
+          "name": "orders_tax_cents_check",
+          "expression": "(tax_cents >= 0)"
+        },
+        {
+          "name": "orders_total_cents_check",
+          "expression": "(total_cents >= 0)"
         }
       ]
     },
@@ -593,16 +814,24 @@
       ],
       "foreignKeys": [
         {
-          "column": "order_id",
+          "constraintName": "payments_order_id_fkey",
+          "columns": [
+            "order_id"
+          ],
           "refTable": "orders",
-          "refColumn": "id",
-          "constraintName": "payments_order_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "tenant_id",
+          "constraintName": "payments_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "payments_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -612,6 +841,39 @@
             "provider_ref"
           ],
           "constraintName": "payments_provider_provider_ref_key"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_payments_order",
+          "columns": [
+            "order_id"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "payments_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "payments_provider_provider_ref_key",
+          "columns": [
+            "provider",
+            "provider_ref"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "payments_amount_cents_check",
+          "expression": "(amount_cents > 0)"
         }
       ]
     },
@@ -654,31 +916,44 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "product_tags_tenant_id_sku_fkey",
+          "columns": [
+            "tenant_id",
+            "sku"
+          ],
           "refTable": "products",
-          "refColumn": "tenant_id",
-          "constraintName": "product_tags_tenant_id_sku_fkey"
+          "refColumns": [
+            "tenant_id",
+            "sku"
+          ]
         },
         {
-          "column": "sku",
-          "refTable": "products",
-          "refColumn": "sku",
-          "constraintName": "product_tags_tenant_id_sku_fkey"
-        },
-        {
-          "column": "tenant_id",
+          "constraintName": "product_tags_tenant_id_tag_slug_fkey",
+          "columns": [
+            "tenant_id",
+            "tag_slug"
+          ],
           "refTable": "tags",
-          "refColumn": "tenant_id",
-          "constraintName": "product_tags_tenant_id_tag_slug_fkey"
-        },
-        {
-          "column": "tag_slug",
-          "refTable": "tags",
-          "refColumn": "slug",
-          "constraintName": "product_tags_tenant_id_tag_slug_fkey"
+          "refColumns": [
+            "tenant_id",
+            "slug"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "product_tags_pkey",
+          "columns": [
+            "tenant_id",
+            "sku",
+            "tag_slug"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "products": {
       "name": "products",
@@ -739,10 +1014,14 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "products_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "products_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -752,6 +1031,32 @@
             "name"
           ],
           "constraintName": "products_tenant_id_name_key"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "products_pkey",
+          "columns": [
+            "tenant_id",
+            "sku"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "products_tenant_id_name_key",
+          "columns": [
+            "tenant_id",
+            "name"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": [
+        {
+          "name": "products_price_cents_check",
+          "expression": "(price_cents >= 0)"
         }
       ]
     },
@@ -786,13 +1091,29 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "tags_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "tags_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "tags_pkey",
+          "columns": [
+            "tenant_id",
+            "slug"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "tenants": {
       "name": "tenants",
@@ -837,7 +1158,26 @@
           ],
           "constraintName": "tenants_slug_key"
         }
-      ]
+      ],
+      "indexes": [
+        {
+          "name": "tenants_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "tenants_slug_key",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "ticket_comments": {
       "name": "ticket_comments",
@@ -890,25 +1230,56 @@
       ],
       "foreignKeys": [
         {
-          "column": "parent_id",
+          "constraintName": "ticket_comments_parent_id_fkey",
+          "columns": [
+            "parent_id"
+          ],
           "refTable": "ticket_comments",
-          "refColumn": "id",
-          "constraintName": "ticket_comments_parent_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "ticket_id",
+          "constraintName": "ticket_comments_ticket_id_fkey",
+          "columns": [
+            "ticket_id"
+          ],
           "refTable": "tickets",
-          "refColumn": "id",
-          "constraintName": "ticket_comments_ticket_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "user_id",
+          "constraintName": "ticket_comments_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
           "refTable": "users",
-          "refColumn": "id",
-          "constraintName": "ticket_comments_user_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "idx_ticket_comments_ticket",
+          "columns": [
+            "ticket_id"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "ticket_comments_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "tickets": {
       "name": "tickets",
@@ -981,19 +1352,47 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "tickets_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "tickets_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "user_id",
+          "constraintName": "tickets_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
           "refTable": "users",
-          "refColumn": "id",
-          "constraintName": "tickets_user_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
-      "uniques": []
+      "uniques": [],
+      "indexes": [
+        {
+          "name": "idx_tickets_tenant_created",
+          "columns": [
+            "tenant_id",
+            "created_at"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "tickets_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "user_groups": {
       "name": "user_groups",
@@ -1032,16 +1431,24 @@
       ],
       "foreignKeys": [
         {
-          "column": "parent_id",
+          "constraintName": "user_groups_parent_id_fkey",
+          "columns": [
+            "parent_id"
+          ],
           "refTable": "user_groups",
-          "refColumn": "id",
-          "constraintName": "user_groups_parent_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         },
         {
-          "column": "tenant_id",
+          "constraintName": "user_groups_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "user_groups_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -1052,7 +1459,35 @@
           ],
           "constraintName": "user_groups_tenant_id_name_key"
         }
-      ]
+      ],
+      "indexes": [
+        {
+          "name": "idx_user_groups_parent",
+          "columns": [
+            "parent_id"
+          ],
+          "isUnique": false,
+          "predicate": null
+        },
+        {
+          "name": "user_groups_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "user_groups_tenant_id_name_key",
+          "columns": [
+            "tenant_id",
+            "name"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "users": {
       "name": "users",
@@ -1105,10 +1540,14 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "users_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "users_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -1119,7 +1558,27 @@
           ],
           "constraintName": "users_tenant_id_email_key"
         }
-      ]
+      ],
+      "indexes": [
+        {
+          "name": "users_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "users_tenant_id_email_key",
+          "columns": [
+            "tenant_id",
+            "email"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     },
     "warehouses": {
       "name": "warehouses",
@@ -1165,10 +1624,14 @@
       ],
       "foreignKeys": [
         {
-          "column": "tenant_id",
+          "constraintName": "warehouses_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
           "refTable": "tenants",
-          "refColumn": "id",
-          "constraintName": "warehouses_tenant_id_fkey"
+          "refColumns": [
+            "id"
+          ]
         }
       ],
       "uniques": [
@@ -1179,7 +1642,27 @@
           ],
           "constraintName": "warehouses_tenant_id_code_key"
         }
-      ]
+      ],
+      "indexes": [
+        {
+          "name": "warehouses_pkey",
+          "columns": [
+            "id"
+          ],
+          "isUnique": true,
+          "predicate": null
+        },
+        {
+          "name": "warehouses_tenant_id_code_key",
+          "columns": [
+            "tenant_id",
+            "code"
+          ],
+          "isUnique": true,
+          "predicate": null
+        }
+      ],
+      "checks": []
     }
   }
 }

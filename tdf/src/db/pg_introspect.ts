@@ -138,6 +138,51 @@ export async function introspectPostgres(
       enumMap.set(r.enum_type, arr);
     }
 
+    // 7) Indexes (including unique and partial unique indexes)
+    const indexRes = await client.query<{
+      table_name: string;
+      index_name: string;
+      column_name: string;
+      is_unique: boolean;
+      index_def: string;
+      ordinal_position: number;
+    }>(`
+      SELECT
+        t.relname AS table_name,
+        i.relname AS index_name,
+        a.attname AS column_name,
+        ix.indisunique AS is_unique,
+        pg_get_indexdef(ix.indexrelid) AS index_def,
+        a.attnum AS ordinal_position
+      FROM pg_index ix
+      JOIN pg_class i ON i.oid = ix.indexrelid
+      JOIN pg_class t ON t.oid = ix.indrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+      WHERE n.nspname = 'public'
+        AND t.relkind = 'r'
+      ORDER BY t.relname, i.relname, a.attnum;
+    `);
+
+    // 8) Check constraints
+    const checkRes = await client.query<{
+      table_name: string;
+      constraint_name: string;
+      check_clause: string;
+    }>(`
+      SELECT
+        tc.table_name,
+        tc.constraint_name,
+        pg_get_constraintdef(c.oid) AS check_clause
+      FROM information_schema.table_constraints tc
+      JOIN pg_namespace n ON n.nspname = tc.constraint_schema
+      JOIN pg_constraint c ON c.conname = tc.constraint_name
+        AND c.connamespace = n.oid
+      WHERE tc.table_schema = 'public'
+        AND tc.constraint_type = 'CHECK'
+      ORDER BY tc.table_name, tc.constraint_name;
+    `);
+
     // ---------- Build SchemaModel ----------
     const schema: SchemaModel = {
       dialect: "postgres",
@@ -152,6 +197,8 @@ export async function introspectPostgres(
         primaryKey: [],
         foreignKeys: [],
         uniques: [],
+        indexes: [],
+        checks: [],
       };
     }
 
@@ -244,6 +291,63 @@ export async function introspectPostgres(
       const table = schema.tables[g.table];
       if (!table) continue;
       table.uniques.push({ columns: g.cols, constraintName: g.constraint });
+    }
+
+    // indexes - group by index_name to handle composite indexes
+    const indexGroup = new Map<
+      string,
+      {
+        table: string;
+        name: string;
+        cols: string[];
+        isUnique: boolean;
+        def: string;
+      }
+    >();
+    for (const r of indexRes.rows) {
+      const key = `${r.table_name}::${r.index_name}`;
+      const g = indexGroup.get(key) ?? {
+        table: r.table_name,
+        name: r.index_name,
+        cols: [],
+        isUnique: r.is_unique,
+        def: r.index_def,
+      };
+      g.cols.push(r.column_name);
+      indexGroup.set(key, g);
+    }
+    for (const g of indexGroup.values()) {
+      const table = schema.tables[g.table];
+      if (!table) continue;
+
+      // Extract WHERE predicate from index definition
+      const whereMatcher = /\sWHERE\s+(.+)$/i;
+      const match = g.def.match(whereMatcher);
+      const predicate = match ? match[1]!.trim() : null;
+
+      table.indexes.push({
+        name: g.name,
+        columns: g.cols,
+        isUnique: g.isUnique,
+        predicate,
+      });
+    }
+
+    // check constraints
+    for (const r of checkRes.rows) {
+      const table = schema.tables[r.table_name];
+      if (!table) continue;
+
+      // pg_get_constraintdef returns "CHECK (expression)"
+      // Strip the "CHECK " prefix
+      const expr = r.check_clause
+        .replace(/^CHECK\s*\(/i, "")
+        .replace(/\)$/, "");
+
+      table.checks.push({
+        name: r.constraint_name,
+        expression: expr,
+      });
     }
 
     return schema;

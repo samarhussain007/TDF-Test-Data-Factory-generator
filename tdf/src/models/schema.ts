@@ -44,12 +44,26 @@ export const UniqueSchema = z.object({
   constraintName: z.string().optional(),
 });
 
+export const IndexSchema = z.object({
+  name: z.string(),
+  columns: z.array(z.string()).min(1),
+  isUnique: z.boolean(),
+  predicate: z.string().nullable(), // WHERE clause for partial indexes
+});
+
+export const CheckSchema = z.object({
+  name: z.string(),
+  expression: z.string(), // The check constraint expression
+});
+
 export const TableSchema = z.object({
   name: z.string(),
   columns: z.record(z.string(), ColumnSchema),
   primaryKey: z.array(z.string()).default([]),
   foreignKeys: z.array(ForeignKeySchema).default([]),
   uniques: z.array(UniqueSchema).default([]),
+  indexes: z.array(IndexSchema).default([]),
+  checks: z.array(CheckSchema).default([]),
 });
 
 export const SchemaModelSchema = z.object({

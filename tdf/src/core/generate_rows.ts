@@ -12,6 +12,12 @@ import {
   weightedPick,
   randomBool,
 } from "../util/rng.js";
+import {
+  parseCheckConstraint,
+  applyRangeBounds,
+  fixRelationalConstraints,
+  type ParsedCheckConstraint,
+} from "../util/constraints.js";
 
 /**
  * Generate all rows based on the plan.
@@ -30,6 +36,10 @@ export function generateRows(
   // Track generated primary keys per table for FK resolution
   const primaryKeys = new Map<string, unknown[]>();
 
+  // Track partial unique index violations to prevent duplicates
+  // Key: "tableName::indexName::predicateValue", Value: Set of column value tuples
+  const partialUniqueTracking = new Map<string, Set<string>>();
+
   for (const tableName of plan.tableOrder) {
     const tablePlan = plan.tablePlans.get(tableName);
     if (!tablePlan) continue;
@@ -37,6 +47,11 @@ export function generateRows(
     const tableSchema = schema.tables[tableName];
     const tableScenario = scenario.tables[tableName];
     if (!tableSchema) continue;
+
+    // Parse check constraints once per table
+    const parsedChecks: ParsedCheckConstraint[] = tableSchema.checks.map(
+      (check) => parseCheckConstraint(check.expression),
+    );
 
     const rows: GeneratedRow[] = [];
     const pks: unknown[] = [];
@@ -50,6 +65,9 @@ export function generateRows(
           tableScenario,
           primaryKeys,
           i,
+          parsedChecks,
+          partialUniqueTracking,
+          tableName,
         );
         rows.push(row);
         pks.push(extractPk(row, tableSchema.primaryKey));
@@ -70,6 +88,9 @@ export function generateRows(
             tableScenario,
             primaryKeys,
             rowIndex,
+            parsedChecks,
+            partialUniqueTracking,
+            tableName,
           );
           // Set FK columns from parent PK (handles both single and composite)
           assignFkValues(row, tablePlan.parentFk!, parentPk);
@@ -106,6 +127,9 @@ export function generateRows(
             tableScenario,
             primaryKeys,
             rowIndex,
+            parsedChecks,
+            partialUniqueTracking,
+            tableName,
           );
           // Set FK columns from left and right PKs (handles both single and composite)
           assignFkValues(row, tablePlan.leftFk!, leftPk);
@@ -130,10 +154,17 @@ function generateSingleRow(
   tableScenario: Scenario["tables"][string] | undefined,
   primaryKeys: Map<string, unknown[]>,
   rowIndex: number,
+  parsedChecks: ParsedCheckConstraint[],
+  partialUniqueTracking: Map<string, Set<string>>,
+  tableName: string,
 ): GeneratedRow {
   const row: GeneratedRow = {};
   const distributions = tableScenario?.distributions ?? {};
   const columnOverrides = tableScenario?.columns ?? {};
+
+  // Collect all range bounds from check constraints
+  const allRangeBounds = parsedChecks.flatMap((pc) => pc.ranges);
+  const allRelationalConstraints = parsedChecks.flatMap((pc) => pc.relational);
 
   for (const [colName, colSchema] of Object.entries(tableSchema.columns)) {
     // Check for column override
@@ -150,17 +181,24 @@ function generateSingleRow(
     } else if (override?.oneOf) {
       value = randomPick(rng, override.oneOf);
     } else if (override?.range) {
+      // Apply check constraint bounds to override range
+      const bounds = applyRangeBounds(
+        colName,
+        allRangeBounds,
+        override.range.min,
+        override.range.max,
+      );
       if (isIntegerType(colSchema.dbType)) {
-        value = randomInt(rng, override.range.min, override.range.max);
+        value = randomInt(rng, bounds.min, bounds.max);
       } else {
-        value = randomFloat(rng, override.range.min, override.range.max);
+        value = randomFloat(rng, bounds.min, bounds.max);
       }
     } else if (distribution) {
       value = weightedPick(rng, distribution);
     } else if (colSchema.enumValues && colSchema.enumValues.length > 0) {
       value = randomPick(rng, colSchema.enumValues);
     } else {
-      // Generate based on column type
+      // Generate based on column type with constraint awareness
       value = generateValueForType(
         rng,
         colSchema.dbType,
@@ -168,6 +206,7 @@ function generateSingleRow(
         colSchema.isPrimaryKey,
         rowIndex,
         primaryKeys,
+        allRangeBounds,
       );
     }
 
@@ -194,6 +233,9 @@ function generateSingleRow(
     row[colName] = value;
   }
 
+  // Fix relational constraints (e.g., reserved <= on_hand)
+  fixRelationalConstraints(row, allRelationalConstraints);
+
   // Apply rules
   if (tableScenario?.rules) {
     for (const rule of tableScenario.rules) {
@@ -210,6 +252,7 @@ function generateSingleRow(
                 false,
                 rowIndex,
                 primaryKeys,
+                allRangeBounds,
               );
             }
           } else {
@@ -219,6 +262,15 @@ function generateSingleRow(
       }
     }
   }
+
+  // Enforce partial unique indexes
+  enforcePartialUniqueIndexes(
+    row,
+    tableSchema,
+    partialUniqueTracking,
+    tableName,
+    rng,
+  );
 
   return row;
 }
@@ -249,6 +301,7 @@ function generateValueForType(
   isPrimaryKey: boolean,
   rowIndex: number,
   _primaryKeys: Map<string, unknown[]>,
+  rangeBounds: { column: string; min?: number; max?: number }[] = [],
 ): unknown {
   const type = dbType.toLowerCase();
 
@@ -257,15 +310,39 @@ function generateValueForType(
     return faker.string.uuid();
   }
 
-  // Integer types
+  // Integer types - apply range bounds from check constraints
   if (type === "int2" || type === "smallint") {
-    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, 1, 1000);
+    const defaultMin = isPrimaryKey ? rowIndex + 1 : 1;
+    const defaultMax = isPrimaryKey ? rowIndex + 1 : 1000;
+    const bounds = applyRangeBounds(
+      colName,
+      rangeBounds,
+      defaultMin,
+      defaultMax,
+    );
+    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, bounds.min, bounds.max);
   }
   if (type === "int4" || type === "integer" || type === "int") {
-    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, 1, 100000);
+    const defaultMin = isPrimaryKey ? rowIndex + 1 : 1;
+    const defaultMax = isPrimaryKey ? rowIndex + 1 : 100000;
+    const bounds = applyRangeBounds(
+      colName,
+      rangeBounds,
+      defaultMin,
+      defaultMax,
+    );
+    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, bounds.min, bounds.max);
   }
   if (type === "int8" || type === "bigint") {
-    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, 1, 1000000);
+    const defaultMin = isPrimaryKey ? rowIndex + 1 : 1;
+    const defaultMax = isPrimaryKey ? rowIndex + 1 : 1000000;
+    const bounds = applyRangeBounds(
+      colName,
+      rangeBounds,
+      defaultMin,
+      defaultMax,
+    );
+    return isPrimaryKey ? rowIndex + 1 : randomInt(rng, bounds.min, bounds.max);
   }
   if (type === "serial" || type === "serial4") {
     return rowIndex + 1;
@@ -444,4 +521,108 @@ function pickNRandom<T>(rng: RNG, arr: T[], n: number): T[] {
   }
 
   return result;
+}
+
+/**
+ * Enforce partial unique indexes.
+ * For indexes with WHERE predicates (e.g., UNIQUE(user_id) WHERE is_default=true),
+ * ensures only one row per grouping key satisfies the predicate.
+ */
+function enforcePartialUniqueIndexes(
+  row: GeneratedRow,
+  tableSchema: SchemaModel["tables"][string],
+  partialUniqueTracking: Map<string, Set<string>>,
+  tableName: string,
+  rng: RNG,
+): void {
+  for (const index of tableSchema.indexes) {
+    if (!index.isUnique || !index.predicate) {
+      continue; // Only care about partial unique indexes
+    }
+
+    // Simple predicate evaluation for common patterns
+    // e.g., "(is_default = true)" or "(status = 'active')"
+    const predicateSatisfied = evaluateSimplePredicate(row, index.predicate);
+
+    if (!predicateSatisfied) {
+      continue; // Predicate not satisfied, no constraint
+    }
+
+    // Build key from indexed columns
+    const indexValueKey = index.columns
+      .map((col) => String(row[col] ?? "null"))
+      .join("::");
+    const trackingKey = `${tableName}::${index.name}`;
+
+    const existingValues = partialUniqueTracking.get(trackingKey) ?? new Set();
+
+    if (existingValues.has(indexValueKey)) {
+      // Violation! This combination already exists with predicate satisfied
+      // Force predicate to be false by changing the predicate column
+      // Extract predicate column (simple case: "column = value")
+      const predicateMatch = index.predicate.match(
+        /\(?([a-z_][a-z0-9_]*)\s*=\s*(\w+|'[^']*')\)?/i,
+      );
+      if (predicateMatch) {
+        const [, predicateCol, predicateVal] = predicateMatch;
+        // Set to a different value to violate predicate
+        if (predicateVal === "true") {
+          row[predicateCol!] = false;
+        } else if (predicateVal === "false") {
+          row[predicateCol!] = true;
+        } else {
+          // For other values, set to null or generate different value
+          const colSchema = tableSchema.columns[predicateCol!];
+          if (colSchema?.isNullable) {
+            row[predicateCol!] = null;
+          }
+        }
+      }
+    } else {
+      // Track this combination
+      existingValues.add(indexValueKey);
+      partialUniqueTracking.set(trackingKey, existingValues);
+    }
+  }
+}
+
+/**
+ * Evaluate simple predicates like "(is_default = true)" or "(status = 'active')".
+ */
+function evaluateSimplePredicate(
+  row: GeneratedRow,
+  predicate: string,
+): boolean {
+  // Remove outer parens
+  let pred = predicate.trim();
+  if (pred.startsWith("(") && pred.endsWith(")")) {
+    pred = pred.slice(1, -1).trim();
+  }
+
+  // Match: column = value
+  const match = pred.match(/^([a-z_][a-z0-9_]*)\s*=\s*(.+)$/i);
+  if (!match) {
+    return false; // Can't evaluate complex predicates
+  }
+
+  const [, column, valueStr] = match;
+  const rowValue = row[column!];
+
+  // Parse expected value
+  let expectedValue: unknown;
+  if (valueStr === "true") {
+    expectedValue = true;
+  } else if (valueStr === "false") {
+    expectedValue = false;
+  } else if (valueStr === "null" || valueStr === "NULL") {
+    expectedValue = null;
+  } else if (valueStr!.startsWith("'") && valueStr!.endsWith("'")) {
+    expectedValue = valueStr!.slice(1, -1);
+  } else if (!isNaN(Number(valueStr))) {
+    expectedValue = Number(valueStr);
+  } else {
+    expectedValue = valueStr!.trim();
+  }
+
+  return rowValue === expectedValue;
 }
