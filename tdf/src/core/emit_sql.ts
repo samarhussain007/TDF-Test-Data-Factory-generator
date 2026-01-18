@@ -1,6 +1,7 @@
 // src/core/emit_sql.ts
 import type { SchemaModel } from "../types/schema.js";
 import type { GeneratedData } from "../types/data.js";
+import { isDbGeneratedDefault } from "../models/schema.js";
 
 /**
  * Emit INSERT statements for all generated data.
@@ -8,7 +9,7 @@ import type { GeneratedData } from "../types/data.js";
 export function emitSql(
   schema: SchemaModel,
   data: GeneratedData,
-  tableOrder: string[]
+  tableOrder: string[],
 ): string {
   const lines: string[] = [];
 
@@ -33,17 +34,12 @@ export function emitSql(
     // Get column names from first row
     const columns = Object.keys(firstRow);
 
-    // Filter out columns that shouldn't be inserted (e.g., serial PKs with hasDefault)
+    // Filter out columns that shouldn't be inserted (DB-generated PKs like serial/identity/UUID)
     const insertColumns = columns.filter((col) => {
       const colSchema = tableSchema.columns[col];
       if (!colSchema) return true;
-      // Skip serial/identity columns
-      const dbType = colSchema.dbType.toLowerCase();
-      if (
-        (dbType.includes("serial") || dbType === "int4" || dbType === "int8") &&
-        colSchema.isPrimaryKey &&
-        colSchema.hasDefault
-      ) {
+      // Skip columns with DB-generated defaults (nextval, gen_random_uuid, etc.)
+      if (colSchema.isPrimaryKey && isDbGeneratedDefault(colSchema)) {
         return false;
       }
       return true;
@@ -55,7 +51,7 @@ export function emitSql(
       const valuesStr = values.join(", ");
 
       lines.push(
-        `INSERT INTO "${tableName}" (${columnsStr}) VALUES (${valuesStr});`
+        `INSERT INTO "${tableName}" (${columnsStr}) VALUES (${valuesStr});`,
       );
     }
 
@@ -131,7 +127,7 @@ function escapeString(str: string): string {
 export function emitTableSql(
   tableName: string,
   rows: Record<string, unknown>[],
-  columns: string[]
+  columns: string[],
 ): string {
   if (rows.length === 0) return "";
 
@@ -144,7 +140,7 @@ export function emitTableSql(
     const valuesStr = values.join(", ");
 
     lines.push(
-      `INSERT INTO "${tableName}" (${columnsStr}) VALUES (${valuesStr});`
+      `INSERT INTO "${tableName}" (${columnsStr}) VALUES (${valuesStr});`,
     );
   }
 

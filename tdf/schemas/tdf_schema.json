@@ -1,0 +1,1185 @@
+{
+  "dialect": "postgres",
+  "tables": {
+    "addresses": {
+      "name": "addresses",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('addresses_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "line1": {
+          "name": "line1",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "line2": {
+          "name": "line2",
+          "dbType": "text",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "city": {
+          "name": "city",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "state": {
+          "name": "state",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "zip": {
+          "name": "zip",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "country": {
+          "name": "country",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": "'IN'::text",
+          "isPrimaryKey": false
+        },
+        "is_default": {
+          "name": "is_default",
+          "dbType": "bool",
+          "isNullable": false,
+          "defaultExpr": "false",
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "addresses_tenant_id_fkey"
+        },
+        {
+          "column": "user_id",
+          "refTable": "users",
+          "refColumn": "id",
+          "constraintName": "addresses_user_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "coupons": {
+      "name": "coupons",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "code": {
+          "name": "code",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "percent_off": {
+          "name": "percent_off",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "active": {
+          "name": "active",
+          "dbType": "bool",
+          "isNullable": false,
+          "defaultExpr": "true",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "tenant_id",
+        "code"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "coupons_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "percent_off",
+            "code"
+          ],
+          "constraintName": "coupons_tenant_id_percent_off_code_key"
+        }
+      ]
+    },
+    "inventory": {
+      "name": "inventory",
+      "columns": {
+        "warehouse_id": {
+          "name": "warehouse_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "sku": {
+          "name": "sku",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "on_hand": {
+          "name": "on_hand",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        },
+        "reserved": {
+          "name": "reserved",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "warehouse_id",
+        "tenant_id",
+        "sku"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "products",
+          "refColumn": "tenant_id",
+          "constraintName": "inventory_tenant_id_sku_fkey"
+        },
+        {
+          "column": "sku",
+          "refTable": "products",
+          "refColumn": "sku",
+          "constraintName": "inventory_tenant_id_sku_fkey"
+        },
+        {
+          "column": "warehouse_id",
+          "refTable": "warehouses",
+          "refColumn": "id",
+          "constraintName": "inventory_warehouse_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "order_audit": {
+      "name": "order_audit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('order_audit_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "event": {
+          "name": "event",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "dbType": "jsonb",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "order_id",
+          "refTable": "orders",
+          "refColumn": "id",
+          "constraintName": "order_audit_order_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "order_coupons": {
+      "name": "order_coupons",
+      "columns": {
+        "order_id": {
+          "name": "order_id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "coupon_code": {
+          "name": "coupon_code",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        }
+      },
+      "primaryKey": [
+        "order_id",
+        "tenant_id",
+        "coupon_code"
+      ],
+      "foreignKeys": [
+        {
+          "column": "order_id",
+          "refTable": "orders",
+          "refColumn": "id",
+          "constraintName": "order_coupons_order_id_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "coupons",
+          "refColumn": "tenant_id",
+          "constraintName": "order_coupons_tenant_id_coupon_code_fkey"
+        },
+        {
+          "column": "coupon_code",
+          "refTable": "coupons",
+          "refColumn": "code",
+          "constraintName": "order_coupons_tenant_id_coupon_code_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "order_items": {
+      "name": "order_items",
+      "columns": {
+        "order_id": {
+          "name": "order_id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "sku": {
+          "name": "sku",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "unit_price_cents": {
+          "name": "unit_price_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "discount_cents": {
+          "name": "discount_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "order_id",
+        "tenant_id",
+        "sku"
+      ],
+      "foreignKeys": [
+        {
+          "column": "order_id",
+          "refTable": "orders",
+          "refColumn": "id",
+          "constraintName": "order_items_order_id_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "products",
+          "refColumn": "tenant_id",
+          "constraintName": "order_items_tenant_id_sku_fkey"
+        },
+        {
+          "column": "sku",
+          "refTable": "products",
+          "refColumn": "sku",
+          "constraintName": "order_items_tenant_id_sku_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "orders": {
+      "name": "orders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('orders_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "address_id": {
+          "name": "address_id",
+          "dbType": "int8",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "status": {
+          "name": "status",
+          "dbType": "order_status",
+          "isNullable": false,
+          "defaultExpr": "'draft'::order_status",
+          "isPrimaryKey": false,
+          "enumValues": [
+            "draft",
+            "placed",
+            "paid",
+            "shipped",
+            "delivered",
+            "cancelled",
+            "refunded"
+          ]
+        },
+        "currency": {
+          "name": "currency",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": "'INR'::text",
+          "isPrimaryKey": false
+        },
+        "subtotal_cents": {
+          "name": "subtotal_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        },
+        "tax_cents": {
+          "name": "tax_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        },
+        "total_cents": {
+          "name": "total_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": "0",
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "address_id",
+          "refTable": "addresses",
+          "refColumn": "id",
+          "constraintName": "orders_address_id_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "orders_tenant_id_fkey"
+        },
+        {
+          "column": "user_id",
+          "refTable": "users",
+          "refColumn": "id",
+          "constraintName": "orders_user_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "id"
+          ],
+          "constraintName": "orders_tenant_id_id_key"
+        }
+      ]
+    },
+    "payments": {
+      "name": "payments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": "gen_random_uuid()",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "provider": {
+          "name": "provider",
+          "dbType": "payment_provider",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false,
+          "enumValues": [
+            "stripe",
+            "razorpay",
+            "paypal",
+            "cash"
+          ]
+        },
+        "provider_ref": {
+          "name": "provider_ref",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "order_id",
+          "refTable": "orders",
+          "refColumn": "id",
+          "constraintName": "payments_order_id_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "payments_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "provider",
+            "provider_ref"
+          ],
+          "constraintName": "payments_provider_provider_ref_key"
+        }
+      ]
+    },
+    "product_tags": {
+      "name": "product_tags",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "sku": {
+          "name": "sku",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "tag_slug": {
+          "name": "tag_slug",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "tenant_id",
+        "sku",
+        "tag_slug"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "products",
+          "refColumn": "tenant_id",
+          "constraintName": "product_tags_tenant_id_sku_fkey"
+        },
+        {
+          "column": "sku",
+          "refTable": "products",
+          "refColumn": "sku",
+          "constraintName": "product_tags_tenant_id_sku_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "tags",
+          "refColumn": "tenant_id",
+          "constraintName": "product_tags_tenant_id_tag_slug_fkey"
+        },
+        {
+          "column": "tag_slug",
+          "refTable": "tags",
+          "refColumn": "slug",
+          "constraintName": "product_tags_tenant_id_tag_slug_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "products": {
+      "name": "products",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "sku": {
+          "name": "sku",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "price_cents": {
+          "name": "price_cents",
+          "dbType": "int4",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "dbType": "bool",
+          "isNullable": false,
+          "defaultExpr": "true",
+          "isPrimaryKey": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "dbType": "jsonb",
+          "isNullable": false,
+          "defaultExpr": "'{}'::jsonb",
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "tenant_id",
+        "sku"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "products_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "name"
+          ],
+          "constraintName": "products_tenant_id_name_key"
+        }
+      ]
+    },
+    "tags": {
+      "name": "tags",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "slug": {
+          "name": "slug",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": true
+        },
+        "label": {
+          "name": "label",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "tenant_id",
+        "slug"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "tags_tenant_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "tenants": {
+      "name": "tenants",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": "gen_random_uuid()",
+          "isPrimaryKey": true
+        },
+        "slug": {
+          "name": "slug",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [],
+      "uniques": [
+        {
+          "columns": [
+            "slug"
+          ],
+          "constraintName": "tenants_slug_key"
+        }
+      ]
+    },
+    "ticket_comments": {
+      "name": "ticket_comments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('ticket_comments_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "ticket_id": {
+          "name": "ticket_id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "dbType": "uuid",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "dbType": "int8",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "body": {
+          "name": "body",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "parent_id",
+          "refTable": "ticket_comments",
+          "refColumn": "id",
+          "constraintName": "ticket_comments_parent_id_fkey"
+        },
+        {
+          "column": "ticket_id",
+          "refTable": "tickets",
+          "refColumn": "id",
+          "constraintName": "ticket_comments_ticket_id_fkey"
+        },
+        {
+          "column": "user_id",
+          "refTable": "users",
+          "refColumn": "id",
+          "constraintName": "ticket_comments_user_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "tickets": {
+      "name": "tickets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('tickets_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "priority": {
+          "name": "priority",
+          "dbType": "ticket_priority",
+          "isNullable": false,
+          "defaultExpr": "'medium'::ticket_priority",
+          "isPrimaryKey": false,
+          "enumValues": [
+            "low",
+            "medium",
+            "high",
+            "urgent"
+          ]
+        },
+        "title": {
+          "name": "title",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "body": {
+          "name": "body",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "dbType": "timestamptz",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "tickets_tenant_id_fkey"
+        },
+        {
+          "column": "user_id",
+          "refTable": "users",
+          "refColumn": "id",
+          "constraintName": "tickets_user_id_fkey"
+        }
+      ],
+      "uniques": []
+    },
+    "user_groups": {
+      "name": "user_groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "int8",
+          "isNullable": false,
+          "defaultExpr": "nextval('user_groups_id_seq'::regclass)",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "dbType": "int8",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "parent_id",
+          "refTable": "user_groups",
+          "refColumn": "id",
+          "constraintName": "user_groups_parent_id_fkey"
+        },
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "user_groups_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "name"
+          ],
+          "constraintName": "user_groups_tenant_id_name_key"
+        }
+      ]
+    },
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": "gen_random_uuid()",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "email": {
+          "name": "email",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "full_name": {
+          "name": "full_name",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "phone": {
+          "name": "phone",
+          "dbType": "text",
+          "isNullable": true,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "dbType": "timestamptz",
+          "isNullable": false,
+          "defaultExpr": "now()",
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "users_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "email"
+          ],
+          "constraintName": "users_tenant_id_email_key"
+        }
+      ]
+    },
+    "warehouses": {
+      "name": "warehouses",
+      "columns": {
+        "id": {
+          "name": "id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": "gen_random_uuid()",
+          "isPrimaryKey": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "dbType": "uuid",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "code": {
+          "name": "code",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "name": {
+          "name": "name",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        },
+        "city": {
+          "name": "city",
+          "dbType": "text",
+          "isNullable": false,
+          "defaultExpr": null,
+          "isPrimaryKey": false
+        }
+      },
+      "primaryKey": [
+        "id"
+      ],
+      "foreignKeys": [
+        {
+          "column": "tenant_id",
+          "refTable": "tenants",
+          "refColumn": "id",
+          "constraintName": "warehouses_tenant_id_fkey"
+        }
+      ],
+      "uniques": [
+        {
+          "columns": [
+            "tenant_id",
+            "code"
+          ],
+          "constraintName": "warehouses_tenant_id_code_key"
+        }
+      ]
+    }
+  }
+}

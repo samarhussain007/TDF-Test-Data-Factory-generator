@@ -5,7 +5,7 @@ import type { SchemaModel } from "../types/schema.js";
 const { Client } = pg;
 
 export async function introspectPostgres(
-  connectionString: string
+  connectionString: string,
 ): Promise<SchemaModel> {
   const client = new Client({ connectionString });
   await client.connect();
@@ -168,7 +168,7 @@ export async function introspectPostgres(
         name: r.column_name,
         dbType,
         isNullable: r.is_nullable === "YES",
-        hasDefault: r.column_default != null,
+        defaultExpr: r.column_default ?? null,
         isPrimaryKey: false,
         ...(enumValues ? { enumValues } : {}),
       };

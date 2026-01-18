@@ -5,10 +5,32 @@ export const ColumnSchema = z.object({
   name: z.string(),
   dbType: z.string(),
   isNullable: z.boolean(),
-  hasDefault: z.boolean(),
+  defaultExpr: z.string().nullable(),
   isPrimaryKey: z.boolean().default(false),
   enumValues: z.array(z.string()).optional(),
 });
+
+/** Patterns that indicate a DB-generated default (sequences, UUIDs) */
+const DB_GENERATED_PATTERNS = [
+  /^nextval\(/i,
+  /^gen_random_uuid\(\)/i,
+  /^uuid_generate_v[14]\(\)/i,
+];
+
+/** Check if a column has any default expression */
+export function hasDefault(col: { defaultExpr: string | null }): boolean {
+  return col.defaultExpr != null;
+}
+
+/** Check if a column's default is DB-generated (serial, identity, UUID generation) */
+export function isDbGeneratedDefault(col: {
+  defaultExpr: string | null;
+}): boolean {
+  if (!col.defaultExpr) return false;
+  return DB_GENERATED_PATTERNS.some((pattern) =>
+    pattern.test(col.defaultExpr!),
+  );
+}
 
 export const ForeignKeySchema = z.object({
   column: z.string(),
