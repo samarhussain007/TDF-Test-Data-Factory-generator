@@ -22,7 +22,7 @@ export const MinMax = z
  */
 export const PerParent = z.object({
   parent: z.string(),
-  fk: z.string(),
+  fk: z.union([z.string(), z.array(z.string())]),
   ...MinMax.shape,
 });
 
@@ -44,11 +44,11 @@ export const M2M = z
   .object({
     left: z.object({
       table: z.string(),
-      fk: z.string(), // join-table column pointing to left.table PK
+      fk: z.union([z.string(), z.array(z.string())]), // join-table column pointing to left.table PK
     }),
     right: z.object({
       table: z.string(),
-      fk: z.string(), // join-table column pointing to right.table PK
+      fk: z.union([z.string(), z.array(z.string())]), // join-table column pointing to right.table PK
     }),
     // MVP: define how many rights per left row
     perLeft: MinMax,
@@ -81,7 +81,7 @@ export const ColumnOverride = z
     (v) =>
       [v.fixed != null, v.oneOf != null, v.range != null].filter(Boolean)
         .length <= 1,
-    { message: "Choose only one of: fixed, oneOf, range" }
+    { message: "Choose only one of: fixed, oneOf, range" },
   );
 
 /**
@@ -119,7 +119,7 @@ export const TableScenario = z
     },
     {
       message: "Provide exactly one of: count, perParent, m2m",
-    }
+    },
   );
 
 export const ScenarioSchema = z.object({

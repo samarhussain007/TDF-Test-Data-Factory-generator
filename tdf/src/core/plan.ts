@@ -10,14 +10,14 @@ import { createRng, randomInt } from "../util/rng.js";
  */
 export function buildPlan(
   schema: SchemaModel,
-  scenario: Scenario
+  scenario: Scenario,
 ): GenerationPlan {
   const seed = scenario.seed ?? Date.now();
   const rng = createRng(seed);
 
   // Get tables from scenario that exist in schema
   const scenarioTables = Object.keys(scenario.tables).filter(
-    (t) => schema.tables[t]
+    (t) => schema.tables[t],
   );
 
   // Build FK edges for topological sort
@@ -25,7 +25,7 @@ export function buildPlan(
 
   // Filter edges to only include scenario tables
   const relevantEdges = allEdges.filter(
-    (e) => scenarioTables.includes(e.from) && scenarioTables.includes(e.to)
+    (e) => scenarioTables.includes(e.from) && scenarioTables.includes(e.to),
   );
 
   // Topologically sort tables
@@ -55,6 +55,15 @@ export function buildPlan(
       const pp = tableScenario.perParent;
       const parentCount = rowCounts.get(pp.parent) ?? 0;
 
+      // Normalize FK to array
+      const fkColumns = typeof pp.fk === "string" ? [pp.fk] : pp.fk;
+
+      // Validate FK columns match a real FK constraint
+      const tableSchema = schema.tables[tableName];
+      if (tableSchema) {
+        validateFkColumns(tableSchema, pp.parent, fkColumns);
+      }
+
       // Generate count for each parent row
       const parentRowCounts: number[] = [];
       let totalRows = 0;
@@ -70,13 +79,26 @@ export function buildPlan(
         mode: "perParent",
         rowCount: totalRows,
         parentTable: pp.parent,
-        parentFk: pp.fk,
+        parentFk: fkColumns,
         parentRowCounts,
       };
     } else if (tableScenario.m2m) {
       // Many-to-many mode
       const m2m = tableScenario.m2m;
       const leftCount = rowCounts.get(m2m.left.table) ?? 0;
+
+      // Normalize FK columns to arrays
+      const leftFkColumns =
+        typeof m2m.left.fk === "string" ? [m2m.left.fk] : m2m.left.fk;
+      const rightFkColumns =
+        typeof m2m.right.fk === "string" ? [m2m.right.fk] : m2m.right.fk;
+
+      // Validate FK columns match real FK constraints
+      const tableSchema = schema.tables[tableName];
+      if (tableSchema) {
+        validateFkColumns(tableSchema, m2m.left.table, leftFkColumns);
+        validateFkColumns(tableSchema, m2m.right.table, rightFkColumns);
+      }
 
       // Generate count of rights for each left
       const perLeftCounts: number[] = [];
@@ -93,9 +115,9 @@ export function buildPlan(
         mode: "m2m",
         rowCount: totalRows,
         leftTable: m2m.left.table,
-        leftFk: m2m.left.fk,
+        leftFk: leftFkColumns,
         rightTable: m2m.right.table,
-        rightFk: m2m.right.fk,
+        rightFk: rightFkColumns,
         perLeftCounts,
       };
     } else {
@@ -112,4 +134,33 @@ export function buildPlan(
     tablePlans,
     rng,
   };
+}
+
+/**
+ * Validate that FK columns match a real FK constraint in the table schema.
+ */
+function validateFkColumns(
+  tableSchema: SchemaModel["tables"][string],
+  refTable: string,
+  fkColumns: string[],
+): void {
+  // Find matching FK constraint
+  const matchingFk = tableSchema.foreignKeys.find(
+    (fk) =>
+      fk.refTable === refTable &&
+      fk.columns.length === fkColumns.length &&
+      fk.columns.every((col, idx) => col === fkColumns[idx]),
+  );
+
+  if (!matchingFk) {
+    throw new Error(
+      `Table ${tableSchema.name}: FK columns [${fkColumns.join(", ")}] -> ${refTable} do not match any FK constraint. ` +
+        `Available FKs to ${refTable}: ${
+          tableSchema.foreignKeys
+            .filter((fk) => fk.refTable === refTable)
+            .map((fk) => `[${fk.columns.join(", ")}]`)
+            .join(", ") || "none"
+        }`,
+    );
+  }
 }

@@ -6,7 +6,7 @@
  */
 export function toposort(
   tables: string[],
-  edges: Array<{ from: string; to: string }> // from depends on to (from has FK to to)
+  edges: Array<{ from: string; to: string }>, // from depends on to (from has FK to to)
 ): string[] {
   const inDegree = new Map<string, number>();
   const adjacency = new Map<string, string[]>();
@@ -54,7 +54,7 @@ export function toposort(
   if (result.length !== tables.length) {
     const remaining = tables.filter((t) => !result.includes(t));
     throw new Error(
-      `Circular dependency detected involving tables: ${remaining.join(", ")}`
+      `Circular dependency detected involving tables: ${remaining.join(", ")}`,
     );
   }
 
@@ -67,8 +67,15 @@ export function toposort(
 export function buildFkEdges(
   tables: Record<
     string,
-    { foreignKeys: Array<{ column: string; refTable: string }> }
-  >
+    {
+      foreignKeys: Array<{
+        constraintName: string;
+        columns: string[];
+        refTable: string;
+        refColumns: string[];
+      }>;
+    }
+  >,
 ): Array<{ from: string; to: string }> {
   const edges: Array<{ from: string; to: string }> = [];
 

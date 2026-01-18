@@ -190,15 +190,38 @@ export async function introspectPostgres(
       }
     }
 
-    // foreign keys (note: this maps column -> referenced column; composite FKs will produce multiple rows)
+    // foreign keys - group by constraint_name to handle composite FKs
+    const fkGroup = new Map<
+      string,
+      {
+        table: string;
+        cols: string[];
+        refTable: string;
+        refCols: string[];
+        constraint: string;
+      }
+    >();
     for (const r of fkRes.rows) {
-      const table = schema.tables[r.table_name];
+      const key = `${r.table_name}::${r.constraint_name}`;
+      const g = fkGroup.get(key) ?? {
+        table: r.table_name,
+        cols: [],
+        refTable: r.foreign_table_name,
+        refCols: [],
+        constraint: r.constraint_name,
+      };
+      g.cols.push(r.column_name);
+      g.refCols.push(r.foreign_column_name);
+      fkGroup.set(key, g);
+    }
+    for (const g of fkGroup.values()) {
+      const table = schema.tables[g.table];
       if (!table) continue;
       table.foreignKeys.push({
-        column: r.column_name,
-        refTable: r.foreign_table_name,
-        refColumn: r.foreign_column_name,
-        constraintName: r.constraint_name,
+        constraintName: g.constraint,
+        columns: g.cols,
+        refTable: g.refTable,
+        refColumns: g.refCols,
       });
     }
 

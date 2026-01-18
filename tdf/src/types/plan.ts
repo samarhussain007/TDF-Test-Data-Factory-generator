@@ -7,13 +7,13 @@ export type TablePlan = {
   rowCount: number;
   // For perParent mode
   parentTable?: string;
-  parentFk?: string;
+  parentFk?: string[];
   parentRowCounts?: number[]; // how many rows per parent
   // For m2m mode
   leftTable?: string;
-  leftFk?: string;
+  leftFk?: string[];
   rightTable?: string;
-  rightFk?: string;
+  rightFk?: string[];
   perLeftCounts?: number[]; // how many rights per left
 };
 

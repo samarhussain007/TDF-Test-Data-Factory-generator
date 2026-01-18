@@ -19,7 +19,7 @@ import {
 export function generateRows(
   schema: SchemaModel,
   scenario: Scenario,
-  plan: GenerationPlan
+  plan: GenerationPlan,
 ): GeneratedData {
   const data = new Map<string, GeneratedRow[]>();
   const rng = plan.rng;
@@ -49,7 +49,7 @@ export function generateRows(
           tableSchema,
           tableScenario,
           primaryKeys,
-          i
+          i,
         );
         rows.push(row);
         pks.push(extractPk(row, tableSchema.primaryKey));
@@ -69,10 +69,10 @@ export function generateRows(
             tableSchema,
             tableScenario,
             primaryKeys,
-            rowIndex
+            rowIndex,
           );
-          // Set the FK to parent
-          row[tablePlan.parentFk!] = parentPk;
+          // Set FK columns from parent PK (handles both single and composite)
+          assignFkValues(row, tablePlan.parentFk!, parentPk);
           rows.push(row);
           pks.push(extractPk(row, tableSchema.primaryKey));
           rowIndex++;
@@ -96,7 +96,7 @@ export function generateRows(
         const selectedRights = pickNRandom(
           rng,
           rightPks,
-          Math.min(count, rightPks.length)
+          Math.min(count, rightPks.length),
         );
 
         for (const rightPk of selectedRights) {
@@ -105,10 +105,11 @@ export function generateRows(
             tableSchema,
             tableScenario,
             primaryKeys,
-            rowIndex
+            rowIndex,
           );
-          row[tablePlan.leftFk!] = leftPk;
-          row[tablePlan.rightFk!] = rightPk;
+          // Set FK columns from left and right PKs (handles both single and composite)
+          assignFkValues(row, tablePlan.leftFk!, leftPk);
+          assignFkValues(row, tablePlan.rightFk!, rightPk);
           rows.push(row);
           pks.push(extractPk(row, tableSchema.primaryKey));
           rowIndex++;
@@ -128,7 +129,7 @@ function generateSingleRow(
   tableSchema: SchemaModel["tables"][string],
   tableScenario: Scenario["tables"][string] | undefined,
   primaryKeys: Map<string, unknown[]>,
-  rowIndex: number
+  rowIndex: number,
 ): GeneratedRow {
   const row: GeneratedRow = {};
   const distributions = tableScenario?.distributions ?? {};
@@ -166,7 +167,7 @@ function generateSingleRow(
         colName,
         colSchema.isPrimaryKey,
         rowIndex,
-        primaryKeys
+        primaryKeys,
       );
     }
 
@@ -208,7 +209,7 @@ function generateSingleRow(
                 col,
                 false,
                 rowIndex,
-                primaryKeys
+                primaryKeys,
               );
             }
           } else {
@@ -224,7 +225,7 @@ function generateSingleRow(
 
 function matchesCondition(
   row: GeneratedRow,
-  condition?: Record<string, unknown>
+  condition?: Record<string, unknown>,
 ): boolean {
   if (!condition) return true;
 
@@ -247,7 +248,7 @@ function generateValueForType(
   colName: string,
   isPrimaryKey: boolean,
   rowIndex: number,
-  _primaryKeys: Map<string, unknown[]>
+  _primaryKeys: Map<string, unknown[]>,
 ): unknown {
   const type = dbType.toLowerCase();
 
@@ -404,6 +405,26 @@ function extractPk(row: GeneratedRow, primaryKey: string[]): unknown {
   }
   // Composite PK - return as tuple
   return primaryKey.map((col) => row[col]);
+}
+
+/**
+ * Assign FK column values from a PK value (handles both single and composite).
+ */
+function assignFkValues(
+  row: GeneratedRow,
+  fkColumns: string[],
+  pkValue: unknown,
+): void {
+  if (fkColumns.length === 1) {
+    // Single FK column - PK value is scalar or array
+    row[fkColumns[0]!] = Array.isArray(pkValue) ? pkValue[0] : pkValue;
+  } else {
+    // Composite FK - PK value should be array
+    const pkValues = Array.isArray(pkValue) ? pkValue : [pkValue];
+    for (let i = 0; i < fkColumns.length; i++) {
+      row[fkColumns[i]!] = pkValues[i];
+    }
+  }
 }
 
 function pickNRandom<T>(rng: RNG, arr: T[], n: number): T[] {

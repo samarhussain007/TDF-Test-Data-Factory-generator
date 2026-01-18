@@ -33,10 +33,10 @@ export function isDbGeneratedDefault(col: {
 }
 
 export const ForeignKeySchema = z.object({
-  column: z.string(),
+  constraintName: z.string(),
+  columns: z.array(z.string()).min(1),
   refTable: z.string(),
-  refColumn: z.string(),
-  constraintName: z.string().optional(),
+  refColumns: z.array(z.string()).min(1),
 });
 
 export const UniqueSchema = z.object({
